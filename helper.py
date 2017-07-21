@@ -65,18 +65,18 @@ def load_and_augment_image(sample):
     image, steering_angle = flip_image(image, steering_angle, rand[1])
 
     # 3. Horizontal shift: left | normal | right
-    image = h_shift_image(image, rand[2])
+    #image = h_shift_image(image, rand[2])
 
     # 4. Vertical shift: up | normal | down
-    image = v_shift_image(image, rand[3])
+    #image = v_shift_image(image, rand[3])
 
     # 5. Brightness: bright | normal | dark
-    image = brightness_image(image, rand[4])
+    #image = brightness_image(image, rand[4])
 
     return image, steering_angle
 
 
-def load_image(sample, rand=0.5, steering_correction=0.25):
+def load_image(sample, rand=0.5, steering_correction=0.18):
     # Load center, left or right image based on rand
     steering_angle = float(sample[3])
     if rand < 1 / 3:
@@ -116,19 +116,19 @@ def brightness_image(img, rand=0.5):
 
 def v_shift_image(img, rand=0.5):
     if rand < 1 / 3:
-        tform = transform.AffineTransform(rotation=0, shear=0, translation=(0, 20))
+        tform = transform.AffineTransform(rotation=0, shear=0, translation=(0, 10))
         img = transform.warp(img, tform)
     elif rand > 2 / 3:
-        tform = transform.AffineTransform(rotation=0, shear=0, translation=(0, -20))
+        tform = transform.AffineTransform(rotation=0, shear=0, translation=(0, -10))
         img = transform.warp(img, tform)
     return img
 
 
 def h_shift_image(img, rand=0.5):
     if rand < 1 / 3:
-        tform = transform.AffineTransform(rotation=0, shear=0, translation=(20, 0))
+        tform = transform.AffineTransform(rotation=0, shear=0, translation=(10, 0))
         img = transform.warp(img, tform)
     elif rand > 2 / 3:
-        tform = transform.AffineTransform(rotation=0, shear=0, translation=(-20, 0))
+        tform = transform.AffineTransform(rotation=0, shear=0, translation=(-10, 0))
         img = transform.warp(img, tform)
     return img

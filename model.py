@@ -6,6 +6,7 @@ from sklearn.utils import shuffle
 from keras.models import Sequential, load_model
 from keras.layers import Flatten, Dense, Conv2D, Dropout, Lambda, Cropping2D
 from keras.preprocessing.image import img_to_array
+from keras.optimizers import Adam
 
 from helper import *
 
@@ -91,7 +92,8 @@ def nvidia_model():
     model.add(Dense(10, activation='relu'))
     model.add(Dropout(0.5))
     model.add(Dense(1))
-    model.compile(optimizer='adam', loss='mse')
+    optimizer = Adam(lr=1e-4)
+    model.compile(optimizer=optimizer, loss='mse')
 
     print('Using Nvidia model with dropout')
     return model
@@ -113,8 +115,8 @@ def simple_model():
 if __name__ == "__main__":
 
     # hyperparameters
-    EPOCHS = 1
-    augments_per_sample = 8
+    EPOCHS = 3
+    augments_per_sample = 3
 
     # load, clean and split data
     driving_log = read_csv()
@@ -124,7 +126,7 @@ if __name__ == "__main__":
     # Instantiate generators and model
     gen_train = train_generator(train_samples, batch_size=32, augments_per_sample=augments_per_sample)
     gen_valid = validation_generator(validation_samples, batch_size=32)
-    #gen_train = validation_generator(train_samples, batch_size=32)
+    # gen_train = validation_generator(train_samples, batch_size=32)
 
     # transfer learning: if there is already a model, load it. If not, instantiate new model.
     if os.path.exists('model.h5'):
@@ -138,7 +140,7 @@ if __name__ == "__main__":
                                          samples_per_epoch=len(train_samples)*augments_per_sample,
                                          validation_data=gen_valid,
                                          nb_val_samples=len(validation_samples),
-                                         verbose=1,
+                                         verbose=2,
                                          nb_epoch=EPOCHS)
     # save model
     model.save('model.h5')
