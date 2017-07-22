@@ -19,11 +19,12 @@ from helper import *
 # dONE: Transfer learning: Save model and load model every time
 # TODO: Stacked histogram for visualisation
 # TODO: use random number to make augmentation random in amount
+# TODO: Visualization of model architecture
 
 
 def train_generator(data, batch_size=32, augments_per_sample=8):
     nb_data = len(data)
-    while 1:
+    while 1: # loop over EPOCHS
         shuffle(data)
         for offset in range(0, nb_data, batch_size):  # loop over batches
             batch_samples = data.values[offset:offset + batch_size]
@@ -32,13 +33,6 @@ def train_generator(data, batch_size=32, augments_per_sample=8):
             steering_angles = []
             for batch_sample in batch_samples:  # loop over samples in batch
                 for n in range(augments_per_sample):  # augmentations per sample
-                    # Run randomizer to determine what kind of augmentation is used.
-                    # There are 4 kinds of augmentations with 3 ways each
-                    # 1. Camera: left image | center image | right image
-                    # 2. Flip: normal | flipped
-                    # 3. Horizontal shift: left | normal | right
-                    # 4. Vertical shift: up | normal | down
-                    # 5. Brightness: bright | normal | dark
 
                     image, steering_angle = load_and_augment_image(batch_sample)
 
@@ -79,6 +73,7 @@ def nvidia_model():
     # 1x1 convolution layer to automatically determine best color model
     model.add(Conv2D(3, 1, 1, subsample=(1, 1), activation='relu'))
 
+    # NVIDIA model
     model.add(Conv2D(24, 5, 5, subsample=(2, 2), activation='relu'))
     model.add(Conv2D(36, 5, 5, subsample=(2, 2), activation='relu'))
     model.add(Conv2D(48, 5, 5, subsample=(2, 2), activation='relu'))
@@ -86,16 +81,39 @@ def nvidia_model():
     model.add(Conv2D(64, 3, 3, subsample=(1, 1), activation='relu'))
     model.add(Flatten())
     model.add(Dense(100, activation='relu'))
-    model.add(Dropout(0.5))
+    model.add(Dropout(0.3))
     model.add(Dense(50, activation='relu'))
-    model.add(Dropout(0.5))
+    model.add(Dropout(0.3))
     model.add(Dense(10, activation='relu'))
-    model.add(Dropout(0.5))
+    model.add(Dropout(0.3))
     model.add(Dense(1))
     optimizer = Adam(lr=1e-4)
     model.compile(optimizer=optimizer, loss='mse')
-
     print('Using Nvidia model with dropout')
+    return model
+
+
+def nvidia_model_no_dropout():
+    model = Sequential()
+    model.add(Cropping2D(cropping=((62, 25), (0, 0)), input_shape=(160, 320, 3)))
+    model.add(Lambda(lambda x: x / 255.0 - 0.5))
+
+    # 1x1 convolution layer to automatically determine best color model
+    model.add(Conv2D(3, 1, 1, subsample=(1, 1), activation='relu'))
+
+    model.add(Conv2D(24, 5, 5, subsample=(2, 2), activation='relu'))
+    model.add(Conv2D(36, 5, 5, subsample=(2, 2), activation='relu'))
+    model.add(Conv2D(48, 5, 5, subsample=(2, 2), activation='relu'))
+    model.add(Conv2D(64, 3, 3, subsample=(1, 1), activation='relu'))
+    model.add(Conv2D(64, 3, 3, subsample=(1, 1), activation='relu'))
+    model.add(Flatten())
+    model.add(Dense(100, activation='relu'))
+    model.add(Dense(50, activation='relu'))
+    model.add(Dense(10, activation='relu'))
+    model.add(Dense(1))
+    optimizer = Adam(lr=1e-4)
+    model.compile(optimizer=optimizer, loss='mse')
+    print('Using Nvidia model without dropout')
     return model
 
 
@@ -107,25 +125,25 @@ def simple_model():
     model.add(Dense(10, activation='relu'))
     model.add(Dense(1))
     model.compile(optimizer='adam', loss='mse')
-
     print('Using simple model!')
     return model
 
 
 if __name__ == "__main__":
 
-    # hyperparameters
-    EPOCHS = 3
-    augments_per_sample = 3
+    # Hyperparameters
+    EPOCHS = 30
+    BATCH_SIZE = 8
+    AUGMENTS_PER_SAMPLE = 8
 
     # load, clean and split data
     driving_log = read_csv()
-    driving_log = clean_data(driving_log)
+    driving_log = clean_data(driving_log, upper_angle=2.0, zero_frac=0.1)
     train_samples, validation_samples = train_test_split(driving_log, test_size=0.2)
 
     # Instantiate generators and model
-    gen_train = train_generator(train_samples, batch_size=32, augments_per_sample=augments_per_sample)
-    gen_valid = validation_generator(validation_samples, batch_size=32)
+    gen_train = train_generator(train_samples, batch_size=BATCH_SIZE, augments_per_sample=AUGMENTS_PER_SAMPLE)
+    gen_valid = validation_generator(validation_samples, batch_size=BATCH_SIZE)
     # gen_train = validation_generator(train_samples, batch_size=32)
 
     # transfer learning: if there is already a model, load it. If not, instantiate new model.
@@ -137,7 +155,7 @@ if __name__ == "__main__":
 
     # train model using generators
     history_object = model.fit_generator(generator=gen_train,
-                                         samples_per_epoch=len(train_samples)*augments_per_sample,
+                                         samples_per_epoch=len(train_samples) * AUGMENTS_PER_SAMPLE,
                                          validation_data=gen_valid,
                                          nb_val_samples=len(validation_samples),
                                          verbose=2,

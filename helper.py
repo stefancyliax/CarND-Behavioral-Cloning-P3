@@ -1,17 +1,19 @@
 import numpy as np
 import pandas as pd
-from skimage import transform, color
+from skimage import transform
 from keras.preprocessing.image import load_img
+
+path = '../SDCND_output/'
 
 
 def read_csv():
-    driving_log = pd.read_csv('../SDCND_output/driving_log.csv', header=None,
+    driving_log = pd.read_csv(path + "driving_log.csv", header=None,
                               names=['Center Image', 'Left Image', 'Right Image', 'Steering Angle',
                                      'Throttle', 'Break', 'Speed'])
     return driving_log
 
 
-def clean_data(driving_log, upper_angle=0.7, zero_frac=0.1):
+def clean_data(driving_log, upper_angle=2.0, zero_frac=0.1):
     # clean the driving log data:
     # 1. remove most but not all samples driving straight to reduce bias of going straight
     # 2. remove samples with large steering angle
@@ -53,9 +55,10 @@ def load_and_augment_image(sample):
     # There are 4 kinds of augmentations with 3 ways each
     # 1. Camera: left image | center image | right image
     # 2. Flip: normal | flipped
-    # 3. Horizontal shift: left | normal | right
-    # 4. Vertical shift: up | normal | down
-    # 5. Brightness: bright | normal | dark
+    # 3. Brightness: bright | normal | dark
+    # 4. Horizontal shift: left | normal | right
+    # 5. Vertical shift: up | normal | down
+
     rand = np.random.random(5)
 
     # 1. Camera: left image | center image | right image
@@ -64,32 +67,32 @@ def load_and_augment_image(sample):
     # 2. Flip: normal | flipped
     image, steering_angle = flip_image(image, steering_angle, rand[1])
 
-    # 3. Horizontal shift: left | normal | right
+    # 3. Brightness: bright | normal | dark
+    image = brightness_image(image, rand[4])
+
+    # 4. Horizontal shift: left | normal | right
     #image = h_shift_image(image, rand[2])
 
-    # 4. Vertical shift: up | normal | down
+    # 5. Vertical shift: up | normal | down
     #image = v_shift_image(image, rand[3])
-
-    # 5. Brightness: bright | normal | dark
-    #image = brightness_image(image, rand[4])
 
     return image, steering_angle
 
 
-def load_image(sample, rand=0.5, steering_correction=0.18):
+def load_image(sample, rand=0.5, steering_correction=0.2):
     # Load center, left or right image based on rand
     steering_angle = float(sample[3])
     if rand < 1 / 3:
         # Left image
-        image_path = '../SDCND_output/IMG/' + sample[1].split('\\')[-1]
+        image_path = path + 'IMG/' + sample[1].split('\\')[-1]
         steering_angle += steering_correction
     elif rand > 2 / 3:
         # Right image
-        image_path = '../SDCND_output/IMG/' + sample[2].split('\\')[-1]
+        image_path = path + 'IMG/' + sample[2].split('\\')[-1]
         steering_angle -= steering_correction
     else:
         # Center image
-        image_path = '../SDCND_output/IMG/' + sample[0].split('\\')[-1]
+        image_path = path + 'IMG/' + sample[0].split('\\')[-1]
 
     # Load image and steering angle
     image = load_img(image_path)
@@ -97,38 +100,34 @@ def load_image(sample, rand=0.5, steering_correction=0.18):
 
 
 def flip_image(img, angle, rand=1):
-    if rand < 1 / 2:
+    if rand < 0.5:
         img = np.fliplr(img)
         angle = angle * -1.0
     return img, angle
 
 
 def brightness_image(img, rand=0.5):
-    img_hsv = color.rgb2hsv(img)
-    if rand < 1 / 3:
-        img_hsv[:, :, 2] = img_hsv[:, :, 2] - 0.3
-    elif rand > 2 / 3:
-        img_hsv[:, :, 2] = img_hsv[:, :, 2] + 0.3
-    img_hsv[:, :, 2] = np.clip(img_hsv[:, :, 2], 0, 1)
-    img = color.hsv2rgb(img_hsv)
+    amount = (rand - 0.5)* 191 #* 255 * 0.75
+    img = img + amount
+    img = np.clip(img, 0, 255)
     return img
 
 
 def v_shift_image(img, rand=0.5):
     if rand < 1 / 3:
-        tform = transform.AffineTransform(rotation=0, shear=0, translation=(0, 10))
+        tform = transform.AffineTransform(rotation=0, shear=0, translation=(0, 20))
         img = transform.warp(img, tform)
     elif rand > 2 / 3:
-        tform = transform.AffineTransform(rotation=0, shear=0, translation=(0, -10))
+        tform = transform.AffineTransform(rotation=0, shear=0, translation=(0, -20))
         img = transform.warp(img, tform)
     return img
 
 
 def h_shift_image(img, rand=0.5):
     if rand < 1 / 3:
-        tform = transform.AffineTransform(rotation=0, shear=0, translation=(10, 0))
+        tform = transform.AffineTransform(rotation=0, shear=0, translation=(50, 0))
         img = transform.warp(img, tform)
     elif rand > 2 / 3:
-        tform = transform.AffineTransform(rotation=0, shear=0, translation=(-10, 0))
+        tform = transform.AffineTransform(rotation=0, shear=0, translation=(-50, 0))
         img = transform.warp(img, tform)
     return img
