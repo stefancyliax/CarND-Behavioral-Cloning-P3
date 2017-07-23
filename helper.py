@@ -3,20 +3,21 @@ import pandas as pd
 from skimage import transform
 from keras.preprocessing.image import load_img
 
-path = '../SDCND_output/'
 
 
-def read_csv():
-    driving_log = pd.read_csv(path + "driving_log.csv", header=None,
-                              names=['Center Image', 'Left Image', 'Right Image', 'Steering Angle',
-                                     'Throttle', 'Break', 'Speed'])
+def read_csv(paths):
+    # read in csv from list of paths. Using pandas for easy handling
+    driving_log = pd.DataFrame([])
+    for path in paths:
+        csv_data = pd.read_csv(path + "driving_log.csv", header=None,
+                               names=['Center Image', 'Left Image', 'Right Image', 'Steering Angle',
+                                      'Throttle', 'Break', 'Speed'])
+        driving_log = pd.concat([driving_log, csv_data])
     return driving_log
 
 
 def clean_data(driving_log, upper_angle=2.0, zero_frac=0.1):
     # clean the driving log data:
-    # 1. remove most but not all samples driving straight to reduce bias of going straight
-    # 2. remove samples with large steering angle
 
     a = driving_log.shape[0]
 
@@ -41,11 +42,10 @@ def clean_data(driving_log, upper_angle=2.0, zero_frac=0.1):
 
     # Print statistics
     print('Number of samples in input data:', a)
-    print('Number of samples going straight:', b)
-    print('Number of random samples going straight that are kept (', zero_frac * 100, '% ):', c)
-    print('Number of samples without samples going straight:', d)
-    print('Without samples with large steering angles ( larger than +-', upper_angle, '):', e)
-    print('Number of samples with rescued samples: ', f)
+    print('Samples going straight:', b, ', Samples steering: ', d)
+    print('Number of random samples going straight that are rescued (', zero_frac * 100, '% ):', c)
+    print('Number after dropping large steering angles ( larger than +-', upper_angle, '):', e)
+    print('Number of cleaned samples with rescued samples: ', f)
 
     return driving_log
 
@@ -71,35 +71,35 @@ def load_and_augment_image(sample):
     image = brightness_image(image, rand[4])
 
     # 4. Horizontal shift: left | normal | right
-    #image = h_shift_image(image, rand[2])
+    # image = h_shift_image(image, rand[2])
 
     # 5. Vertical shift: up | normal | down
-    #image = v_shift_image(image, rand[3])
+    # image = v_shift_image(image, rand[3])
 
     return image, steering_angle
 
 
-def load_image(sample, rand=0.5, steering_correction=0.2):
+def load_image(sample, rand=0.5, steering_correction=0.15):
     # Load center, left or right image based on rand
     steering_angle = float(sample[3])
     if rand < 1 / 3:
         # Left image
-        image_path = path + 'IMG/' + sample[1].split('\\')[-1]
+        image_path = sample[1]
         steering_angle += steering_correction
     elif rand > 2 / 3:
         # Right image
-        image_path = path + 'IMG/' + sample[2].split('\\')[-1]
+        image_path = sample[2]
         steering_angle -= steering_correction
     else:
         # Center image
-        image_path = path + 'IMG/' + sample[0].split('\\')[-1]
+        image_path = sample[0]
 
     # Load image and steering angle
     image = load_img(image_path)
     return image, steering_angle
 
 
-def flip_image(img, angle, rand=1):
+def flip_image(img, angle, rand=1.0):
     if rand < 0.5:
         img = np.fliplr(img)
         angle = angle * -1.0
@@ -107,7 +107,7 @@ def flip_image(img, angle, rand=1):
 
 
 def brightness_image(img, rand=0.5):
-    amount = (rand - 0.5)* 191 #* 255 * 0.75
+    amount = (rand - 0.5) * 191  # * 255 * 0.75
     img = img + amount
     img = np.clip(img, 0, 255)
     return img

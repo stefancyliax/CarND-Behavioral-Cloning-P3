@@ -7,24 +7,14 @@ from keras.models import Sequential, load_model
 from keras.layers import Flatten, Dense, Conv2D, Dropout, Lambda, Cropping2D
 from keras.preprocessing.image import img_to_array
 from keras.optimizers import Adam
+from keras.callbacks import TensorBoard, EarlyStopping
 
 from helper import *
 
 
-# DONE: 1x1 convolutions to automatically get best color model
-# DONE: 0. drive.py sends RGB images to the model; cv2.load_img() reads images in BGR format!!!!
-# DONE: Horizontal and vertical shifts
-# DONE: Data augmentation: brightness
-# DONE: Remove data with steering angle =0
-# dONE: Transfer learning: Save model and load model every time
-# TODO: Stacked histogram for visualisation
-# TODO: use random number to make augmentation random in amount
-# TODO: Visualization of model architecture
-
-
 def train_generator(data, batch_size=32, augments_per_sample=8):
     nb_data = len(data)
-    while 1: # loop over EPOCHS
+    while 1:  # loop over EPOCHS
         shuffle(data)
         for offset in range(0, nb_data, batch_size):  # loop over batches
             batch_samples = data.values[offset:offset + batch_size]
@@ -46,7 +36,7 @@ def train_generator(data, batch_size=32, augments_per_sample=8):
 
 def validation_generator(data, batch_size=32):
     nb_data = len(data)
-    while 1:
+    while 1: # loop over EPOCHS
         shuffle(data)
         for offset in range(0, nb_data, batch_size):  # loop over batches
             batch_samples = data.values[offset:offset + batch_size]
@@ -93,58 +83,29 @@ def nvidia_model():
     return model
 
 
-def nvidia_model_no_dropout():
-    model = Sequential()
-    model.add(Cropping2D(cropping=((62, 25), (0, 0)), input_shape=(160, 320, 3)))
-    model.add(Lambda(lambda x: x / 255.0 - 0.5))
-
-    # 1x1 convolution layer to automatically determine best color model
-    model.add(Conv2D(3, 1, 1, subsample=(1, 1), activation='relu'))
-
-    model.add(Conv2D(24, 5, 5, subsample=(2, 2), activation='relu'))
-    model.add(Conv2D(36, 5, 5, subsample=(2, 2), activation='relu'))
-    model.add(Conv2D(48, 5, 5, subsample=(2, 2), activation='relu'))
-    model.add(Conv2D(64, 3, 3, subsample=(1, 1), activation='relu'))
-    model.add(Conv2D(64, 3, 3, subsample=(1, 1), activation='relu'))
-    model.add(Flatten())
-    model.add(Dense(100, activation='relu'))
-    model.add(Dense(50, activation='relu'))
-    model.add(Dense(10, activation='relu'))
-    model.add(Dense(1))
-    optimizer = Adam(lr=1e-4)
-    model.compile(optimizer=optimizer, loss='mse')
-    print('Using Nvidia model without dropout')
-    return model
-
-
-def simple_model():
-    model = Sequential()
-    model.add(Cropping2D(cropping=((62, 25), (0, 0)), input_shape=(160, 320, 3)))
-    model.add(Lambda(lambda x: x / 255.0 - 0.5))
-    model.add(Flatten())
-    model.add(Dense(10, activation='relu'))
-    model.add(Dense(1))
-    model.compile(optimizer='adam', loss='mse')
-    print('Using simple model!')
-    return model
-
-
 if __name__ == "__main__":
+    # Data to learn
+    paths = ['../Driving_Data/',
+             '../Driving_Data_second_track_dynamic/',
+             '../Driving_Data_second_track_dynamic_2/']
 
     # Hyperparameters
-    EPOCHS = 30
-    BATCH_SIZE = 8
-    AUGMENTS_PER_SAMPLE = 8
+    EPOCHS = 2
+    BATCH_SIZE = 32
+    AUGMENTS_PER_SAMPLE = 5
 
     # load, clean and split data
-    driving_log = read_csv()
+    driving_log = read_csv(paths)
     driving_log = clean_data(driving_log, upper_angle=2.0, zero_frac=0.1)
     train_samples, validation_samples = train_test_split(driving_log, test_size=0.2)
 
     # Instantiate generators and model
     gen_train = train_generator(train_samples, batch_size=BATCH_SIZE, augments_per_sample=AUGMENTS_PER_SAMPLE)
     gen_valid = validation_generator(validation_samples, batch_size=BATCH_SIZE)
-    # gen_train = validation_generator(train_samples, batch_size=32)
+
+    # Create Tensorboard object
+    tbCallBack = TensorBoard(log_dir='./tensorboard', histogram_freq=1, write_graph=True, write_images=True)
+    earlystop = EarlyStopping(monitor='val_loss', patience=2)
 
     # transfer learning: if there is already a model, load it. If not, instantiate new model.
     if os.path.exists('model.h5'):
@@ -159,7 +120,8 @@ if __name__ == "__main__":
                                          validation_data=gen_valid,
                                          nb_val_samples=len(validation_samples),
                                          verbose=2,
-                                         nb_epoch=EPOCHS)
+                                         nb_epoch=EPOCHS,
+                                         callbacks=[tbCallBack, earlystop])
     # save model
     model.save('model.h5')
 
