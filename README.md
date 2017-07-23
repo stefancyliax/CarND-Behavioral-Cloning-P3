@@ -79,7 +79,8 @@ The model was also extended with a cropping layer, to crop insignificant portion
 Since the model is used by NVIDIA to drive a real car on real roads, it is probably oversized for this project. This is another reason I had to be careful about overfitting. For this I introduced Dropout at the fully-connected layers.
 
 As optimizer the [Adam Optimizer](https://keras.io/optimizers/#adam) with a learning rate of 0.0001.
-![model architecture](https://github.com/stefancyliax/CarND-Behavioral-Cloning-P3/raw/master/pic/network_arch.jpg)
+
+![model architecture](https://github.com/stefancyliax/CarND-Behavioral-Cloning-P3/raw/master/pic/network_arch.JPG)
 
 ```python
 def nvidia_model():
