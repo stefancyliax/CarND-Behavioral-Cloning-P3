@@ -20,6 +20,9 @@ The inspection of the first track lead to the some observations and challenges i
 
 To tackle this overfitting-prone, unbalanced dataset a data augmentation was implemented.
 
+####Data Aquisition
+To aquire training data I used a Xbox 360 controller and drove 4 laps and tried to keep in the center of the track. I also recorded 2 laps drivnig the track in reverse direction. Finally I recorded recovery scenarios where I drove the vehicle from the left or right side back to the center of the track.
+
 ####Data Augmentation And Cleaning
 To provide the model with a Data augmentation tackles shortcommings in the dataset. This enables the extraction of more information which helps prevent overfitting and aids in generalization.
 
@@ -28,140 +31,60 @@ I implemented a generator losely based on Keras [ImageDataGenerator](https://ker
 
 TODO: Bild einfügen
 
-A big percentage of the datapoints were driving straight as the histogram shows which leads to a big bias for going straight.
+A big percentage of the datapoints were driving straight as the histogram shows which leads to a big bias for going straight. I implemented a function to clean the data by dropping most, but not all datapoint with a steering angle of 0. The function also allows to drop steering angles above a margin but this wasn't used in the end.
+```python
+from test import test
+```
+
+
+TODO: Histogramme einfügen
+
+Finally the images are cropped and normalized in the Keras model.
 
 
 ####Model Architecture
-I adopted the architecture from the [NVIDIA paper](https://arxiv.org/abs/1604.07316). Since it's used by NVIDIA to drive a real car on real roads, it is probably oversized for this project. This is nother reason I had be careful about overfitting and introduced Dropout at the fully-connected layers.
+The model used as derived from the architecture used by [NVIDIA paper](https://arxiv.org/abs/1604.07316). Since it's used to drive a real car on real roads, it is probably oversized for this project. This is another reason I had be careful about overfitting. To combat this, I introduced Dropout at the fully-connected layers.
 
 The model was also extended with a cropping layer, to crop insignificant portions of the images. Then a normalization layer was added followed by a 3 1x1 convolutional layer to let the network choose the best color space automatically.
+
 Since the model is used by NVIDIA to drive a real car on real roads, it is probably oversized for this project. This is another reason I had to be careful about overfitting. For this I introduced Dropout at the fully-connected layers.
 
+As optimizer the [Adam Optimizer](https://keras.io/optimizers/#adam) with a learning rate of 0.0001.
 TODO: Bild einfügen
 
+
 ###Training
-I trained the model using the generator with 32 samples with 5 random augmentations each. This adds up to a batch size of 160. For the first track I trained the model on 8859 datapoints and generated 44295 images per epoch.
+I trained the model using the generator with 32 samples with 5 random augmentations each. This adds up to a batch size of 160.
+After splitting the data into training (80%) and validation (20%) set, I trained the model on 7087 datapoints and generated 35435 images per epoch. After 3 epochs the car was able to drive the first track in the simulator.
 
-###Conclusion
-- really showed the benefits of transfer learning
+Tests showed, that training for up to 50 epochs would result in a better performing car. This is probably due to the random data augmentation strategy. Each epoch is training on a new set of 35435 images.
+
+TODO: Bild einfügen.
+Note that the model was not able to drive the car on the challenge track with only data from the first track. This suggest that the model is not generalizing very well. A more sofisticated augementation should be able to drive the car on the second track even after never seeing it in training.
+Note that I was able to drive the vehicle on the first track after only training it on data from the second track.
+
+###Shortcomings
+- I was not able to generalize the learning enough that the car could be teached to drive on track 2 after only beeing trained on track 1. For this more data augmentations would be necessary.
+- I'd like to do some tests with a smaller model to better fit the problem of track 1.
 
 
 
-##Example videos
+##Second Track
+After the first track didn't provide a big challenge I tried my luck on the second track. I recorded 4 laps driving "the ideal line" by cutting corners instead of keeping in the middle of the lane. I wanted to see if the model would be able to pick up on a more realistic driving behavior.
+After splitting the data I trained the model on 7960 data points and generated 39800 random images per epoch. Due to the more complex track more epochs were necessary. I used the [Keras function EarlyStopping](https://faroit.github.io/keras-docs/1.2.2/callbacks/#earlystopping) that interrupts the training when the validation loss isn't decreasing anymore and started training with 50 epochs over night.
+TODO: Bild einfügen.
+EarlyStopping didn't interrupt the learning process because of the a unstable validation loss. At about 35 epochs overfitting started but the model was still learning.
+
+After the training the model was almost able to drive the second track at a full 30mph. It was just cutting one corner to much. To eliminate this I recorded the corner again the finetuned the mode by loading the model and trained it for another 2 epochs on just the data of the corner. After that the car was able to drive the second track.
+
 https://youtu.be/YkSBKT-wS68
 
 
 
 
-This repository contains starting files for the Behavioral Cloning Project.
+###Conclusion
+Really showed the benefits of transfer learning
 
-In this project, you will use what you've learned about deep neural networks and convolutional neural networks to clone driving behavior. You will train, validate and test a model using Keras. The model will output a steering angle to an autonomous vehicle.
 
-We have provided a simulator where you can steer a car around a track for data collection. You'll use image data and steering angles to train a neural network and then use this model to drive the car autonomously around the track.
 
-We also want you to create a detailed writeup of the project. Check out the [writeup template](https://github.com/udacity/CarND-Behavioral-Cloning-P3/blob/master/writeup_template.md) for this project and use it as a starting point for creating your own writeup. The writeup can be either a markdown file or a pdf document.
-
-To meet specifications, the project will require submitting five files:
-* model.py (script used to create and train the model)
-* drive.py (script to drive the car - feel free to modify this file)
-* model.h5 (a trained Keras model)
-* a report writeup file (either markdown or pdf)
-* video.mp4 (a video recording of your vehicle driving autonomously around the track for at least one full lap)
-
-This README file describes how to output the video in the "Details About Files In This Directory" section.
-
-Creating a Great Writeup
----
-A great writeup should include the [rubric points](https://review.udacity.com/#!/rubrics/432/view) as well as your description of how you addressed each point.  You should include a detailed description of the code used (with line-number references and code snippets where necessary), and links to other supporting documents or external references.  You should include images in your writeup to demonstrate how your code works with examples.  
-
-All that said, please be concise!  We're not looking for you to write a book here, just a brief description of how you passed each rubric point, and references to the relevant code :).
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup.
-
-The Project
----
-The goals / steps of this project are the following:
-* Use the simulator to collect data of good driving behavior
-* Design, train and validate a model that predicts a steering angle from image data
-* Use the model to drive the vehicle autonomously around the first track in the simulator. The vehicle should remain on the road for an entire loop around the track.
-* Summarize the results with a written report
-
-### Dependencies
-This lab requires:
-
-* [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit)
-
-The lab enviroment can be created with CarND Term1 Starter Kit. Click [here](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) for the details.
-
-The following resources can be found in this github repository:
-* drive.py
-* video.py
-* writeup_template.md
-
-The simulator can be downloaded from the classroom. In the classroom, we have also provided sample data that you can optionally use to help train your model.
-
-## Details About Files In This Directory
-
-### `drive.py`
-
-Usage of `drive.py` requires you have saved the trained model as an h5 file, i.e. `model.h5`. See the [Keras documentation](https://keras.io/getting-started/faq/#how-can-i-save-a-keras-model) for how to create this file using the following command:
-```sh
-model.save(filepath)
-```
-
-Once the model has been saved, it can be used with drive.py using this command:
-
-```sh
-python drive.py model.h5
-```
-
-The above command will load the trained model and use the model to make predictions on individual images in real-time and send the predicted angle back to the server via a websocket connection.
-
-Note: There is known local system's setting issue with replacing "," with "." when using drive.py. When this happens it can make predicted steering values clipped to max/min values. If this occurs, a known fix for this is to add "export LANG=en_US.utf8" to the bashrc file.
-
-#### Saving a video of the autonomous agent
-
-```sh
-python drive.py model.h5 run1
-```
-
-The fourth argument, `run1`, is the directory in which to save the images seen by the agent. If the directory already exists, it'll be overwritten.
-
-```sh
-ls run1
-
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_424.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_451.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_477.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_528.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_573.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_618.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_697.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_723.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_749.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_817.jpg
-...
-```
-
-The image file name is a timestamp of when the image was seen. This information is used by `video.py` to create a chronological video of the agent driving.
-
-### `video.py`
-
-```sh
-python video.py run1
-```
-
-Creates a video based on images found in the `run1` directory. The name of the video will be the name of the directory followed by `'.mp4'`, so, in this case the video will be `run1.mp4`.
-
-Optionally, one can specify the FPS (frames per second) of the video:
-
-```sh
-python video.py run1 --fps 48
-```
-
-Will run the video at 48 FPS. The default FPS is 60.
-
-#### Why create a video
-
-1. It's been noted the simulator might perform differently based on the hardware. So if your model drives succesfully on your machine it might not on another machine (your reviewer). Saving a video is a solid backup in case this happens.
-2. You could slightly alter the code in `drive.py` and/or `video.py` to create a video of what your model sees after the image is processed (may be helpful for debugging).
+##Example videos
