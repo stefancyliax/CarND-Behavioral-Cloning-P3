@@ -5,7 +5,6 @@ from sklearn.utils import shuffle
 
 from keras.models import Sequential, load_model
 from keras.layers import Flatten, Dense, Conv2D, Dropout, Lambda, Cropping2D
-from keras.preprocessing.image import img_to_array
 from keras.optimizers import Adam
 from keras.callbacks import TensorBoard, EarlyStopping
 
@@ -26,7 +25,7 @@ def train_generator(data, batch_size=32, augments_per_sample=8):
 
                     image, steering_angle = load_and_augment_image(batch_sample)
 
-                    images.append(img_to_array(image))
+                    images.append(image)
                     steering_angles.append(steering_angle)
 
             X_train = np.array(images)
@@ -47,7 +46,7 @@ def validation_generator(data, batch_size=32):
                 # don't make any augmentations, just load the data
                 image, steering_angle = load_image(batch_sample)
 
-                images.append(img_to_array(image))
+                images.append(image)
                 steering_angles.append(steering_angle)
 
             X_valid = np.array(images)
@@ -58,7 +57,7 @@ def validation_generator(data, batch_size=32):
 def nvidia_model():
     model = Sequential()
     model.add(Cropping2D(cropping=((62, 25), (0, 0)), input_shape=(160, 320, 3)))
-    model.add(Lambda(lambda x: x / 255.0 - 0.5))
+    model.add(Lambda(lambda x: x - 0.5))
 
     # 1x1 convolution layer to automatically determine best color model
     model.add(Conv2D(3, 1, 1, subsample=(1, 1), activation='relu'))
@@ -85,14 +84,12 @@ def nvidia_model():
 
 if __name__ == "__main__":
     # Data to learn
-    paths = ['../Driving_Data/',
-             '../Driving_Data_second_track_dynamic/',
-             '../Driving_Data_second_track_dynamic_2/']
+    paths = ['../SDCND_small/']
 
     # Hyperparameters
-    EPOCHS = 2
-    BATCH_SIZE = 32
-    AUGMENTS_PER_SAMPLE = 5
+    EPOCHS = 10
+    BATCH_SIZE = 4
+    AUGMENTS_PER_SAMPLE = 32
 
     # load, clean and split data
     driving_log = read_csv(paths)
@@ -101,11 +98,11 @@ if __name__ == "__main__":
 
     # Instantiate generators and model
     gen_train = train_generator(train_samples, batch_size=BATCH_SIZE, augments_per_sample=AUGMENTS_PER_SAMPLE)
-    gen_valid = validation_generator(validation_samples, batch_size=BATCH_SIZE)
+    gen_valid = validation_generator(validation_samples, batch_size=32)
 
     # Create Tensorboard object
-    tbCallBack = TensorBoard(log_dir='./tensorboard', histogram_freq=1, write_graph=True, write_images=True)
-    earlystop = EarlyStopping(monitor='val_loss', patience=2)
+    #tbCallBack = TensorBoard(log_dir='./tensorboard', histogram_freq=1, write_graph=True, write_images=True)
+    #earlystop = EarlyStopping(monitor='val_loss', patience=2)
 
     # transfer learning: if there is already a model, load it. If not, instantiate new model.
     if os.path.exists('model.h5'):
@@ -119,9 +116,8 @@ if __name__ == "__main__":
                                          samples_per_epoch=len(train_samples) * AUGMENTS_PER_SAMPLE,
                                          validation_data=gen_valid,
                                          nb_val_samples=len(validation_samples),
-                                         verbose=2,
-                                         nb_epoch=EPOCHS,
-                                         callbacks=[tbCallBack, earlystop])
+                                         verbose=1,
+                                         nb_epoch=EPOCHS)
     # save model
     model.save('model.h5')
 

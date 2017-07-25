@@ -1,8 +1,7 @@
 import numpy as np
 import pandas as pd
-from skimage import transform
-from keras.preprocessing.image import load_img
-
+from skimage import transform, util, color
+from keras.preprocessing.image import load_img, img_to_array
 
 
 def read_csv(paths):
@@ -59,7 +58,7 @@ def load_and_augment_image(sample):
     # 4. Horizontal shift: left | normal | right
     # 5. Vertical shift: up | normal | down
 
-    rand = np.random.random(5)
+    rand = np.random.random(9)
 
     # 1. Camera: left image | center image | right image
     image, steering_angle = load_image(sample, rand[0])
@@ -68,14 +67,23 @@ def load_and_augment_image(sample):
     image, steering_angle = flip_image(image, steering_angle, rand[1])
 
     # 3. Brightness: bright | normal | dark
-    image = brightness_image(image, rand[4])
+    image = brightness_image(image, rand[2])
+
+    image = invert_image(image, rand[7])
+
+    image = grayscale(image, rand[8])
 
     # 4. Horizontal shift: left | normal | right
-    # image = h_shift_image(image, rand[2])
+    image = h_shift_image(image, rand[3])
 
     # 5. Vertical shift: up | normal | down
-    # image = v_shift_image(image, rand[3])
+    image = v_shift_image(image, rand[4])
 
+    image, steering_angle = rotate_image(image, steering_angle, rand[5])
+
+    image, steering_angle = shear_image(image, steering_angle, rand[6])
+
+    steering_angle = np.clip(steering_angle, -1, 1)
     return image, steering_angle
 
 
@@ -96,6 +104,7 @@ def load_image(sample, rand=0.5, steering_correction=0.15):
 
     # Load image and steering angle
     image = load_img(image_path)
+    image = np.array(img_to_array(image)) / 255
     return image, steering_angle
 
 
@@ -107,27 +116,50 @@ def flip_image(img, angle, rand=1.0):
 
 
 def brightness_image(img, rand=0.5):
-    amount = (rand - 0.5) * 191  # * 255 * 0.75
+    amount = (rand - 0.5) * 0.75  # * 255 * 0.75
     img = img + amount
-    img = np.clip(img, 0, 255)
+    img = np.clip(img, 0, 1)
     return img
 
 
 def v_shift_image(img, rand=0.5):
-    if rand < 1 / 3:
-        tform = transform.AffineTransform(rotation=0, shear=0, translation=(0, 20))
-        img = transform.warp(img, tform)
-    elif rand > 2 / 3:
-        tform = transform.AffineTransform(rotation=0, shear=0, translation=(0, -20))
-        img = transform.warp(img, tform)
+    amount = int((rand * 40) - 20)
+    tform = transform.AffineTransform(rotation=0, shear=0, translation=(0, amount))
+    img = transform.warp(img, tform)
     return img
 
 
 def h_shift_image(img, rand=0.5):
-    if rand < 1 / 3:
-        tform = transform.AffineTransform(rotation=0, shear=0, translation=(50, 0))
-        img = transform.warp(img, tform)
-    elif rand > 2 / 3:
-        tform = transform.AffineTransform(rotation=0, shear=0, translation=(-50, 0))
-        img = transform.warp(img, tform)
+    amount = int((rand * 100) - 50)
+    tform = transform.AffineTransform(rotation=0, shear=0, translation=(amount, 0))
+    img = transform.warp(img, tform)
+    return img
+
+
+def rotate_image(img, angle, rand=0.5):
+    amount = (rand * 30) - 15
+    img = transform.rotate(img, angle=amount)
+    angle = angle - ((rand-0.5) * 0.3)
+    return np.array(img), angle
+
+
+def shear_image(img, angle, rand=0.5):
+    amount = rand - 0.5
+    tform = transform.AffineTransform(rotation=0, shear=amount, translation=(amount * 80, 0))
+    img = transform.warp(img, tform)
+    angle = angle - ((rand - 0.5) * 0.3)
+    return img, angle
+
+
+def invert_image(img, rand=1):
+    if rand > 0.5:
+        img = util.invert(img)
+    return img
+
+
+def grayscale(img, rand=1):
+    if rand > 0.5:
+        img = color.rgb2gray(img)
+        img = np.stack([img, img, img], axis=2)
+        assert img.shape == (160, 320, 3)
     return img
