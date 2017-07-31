@@ -145,7 +145,7 @@ def rotate_image(img, angle, rand=0.5):
 
 def shear_image(img, angle, rand=0.5):
     amount = rand - 0.5
-    tform = transform.AffineTransform(rotation=0, shear=amount, translation=(amount * 80, 0))
+    tform = transform.AffineTransform(rotation=0, shear=amount, translation=(amount * 160, 0))
     img = transform.warp(img, tform)
     angle = angle - ((rand - 0.5) * 0.3)
     return img, angle

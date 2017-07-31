@@ -4,9 +4,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 
 from keras.models import Sequential, load_model
-from keras.layers import Flatten, Dense, Conv2D, Dropout, Lambda, Cropping2D
+from keras.layers import Flatten, Dense, Conv2D, Dropout, Lambda, Cropping2D, advanced_activations
 from keras.optimizers import Adam
 from keras.callbacks import TensorBoard, EarlyStopping
+
 
 from helper import *
 
@@ -60,21 +61,29 @@ def nvidia_model():
     model.add(Lambda(lambda x: x - 0.5))
 
     # 1x1 convolution layer to automatically determine best color model
-    model.add(Conv2D(3, 1, 1, subsample=(1, 1), activation='relu'))
-
+    model.add(Conv2D(3, 1, 1, subsample=(1, 1)))
+    model.add(advanced_activations.LeakyReLU())
     # NVIDIA model
-    model.add(Conv2D(24, 5, 5, subsample=(2, 2), activation='relu'))
-    model.add(Conv2D(36, 5, 5, subsample=(2, 2), activation='relu'))
-    model.add(Conv2D(48, 5, 5, subsample=(2, 2), activation='relu'))
-    model.add(Conv2D(64, 3, 3, subsample=(1, 1), activation='relu'))
-    model.add(Conv2D(64, 3, 3, subsample=(1, 1), activation='relu'))
+    model.add(Conv2D(24, 5, 5, subsample=(2, 2)))
+    model.add(advanced_activations.LeakyReLU())
+    model.add(Conv2D(36, 5, 5, subsample=(2, 2)))
+    model.add(advanced_activations.LeakyReLU())
+    model.add(Conv2D(48, 5, 5, subsample=(2, 2)))
+    model.add(advanced_activations.LeakyReLU())
+    model.add(Conv2D(64, 3, 3, subsample=(1, 1)))
+    model.add(advanced_activations.LeakyReLU())
+    model.add(Conv2D(64, 3, 3, subsample=(1, 1)))
+    model.add(advanced_activations.LeakyReLU())
     model.add(Flatten())
-    model.add(Dense(100, activation='relu'))
-    model.add(Dropout(0.3))
-    model.add(Dense(50, activation='relu'))
-    model.add(Dropout(0.3))
-    model.add(Dense(10, activation='relu'))
-    model.add(Dropout(0.3))
+    model.add(Dense(100))
+    model.add(advanced_activations.LeakyReLU())
+    #model.add(Dropout(0.3))
+    model.add(Dense(50))
+    model.add(advanced_activations.LeakyReLU())
+    #model.add(Dropout(0.3))
+    model.add(Dense(10))
+    model.add(advanced_activations.LeakyReLU())
+    #model.add(Dropout(0.3))
     model.add(Dense(1))
     optimizer = Adam(lr=1e-4)
     model.compile(optimizer=optimizer, loss='mse')
@@ -84,11 +93,11 @@ def nvidia_model():
 
 if __name__ == "__main__":
     # Data to learn
-    paths = ['../SDCND_small/']
+    paths = ['../Driving_Data/']
 
     # Hyperparameters
-    EPOCHS = 10
-    BATCH_SIZE = 4
+    EPOCHS = 3
+    BATCH_SIZE = 8
     AUGMENTS_PER_SAMPLE = 32
 
     # load, clean and split data
